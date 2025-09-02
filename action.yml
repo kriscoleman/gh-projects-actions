@@ -1,0 +1,54 @@
+name: 'GitHub Projects Iteration Rollover'
+description: 'Automate iteration rollover for GitHub Projects using gh-projects CLI'
+author: 'kriscoleman'
+
+inputs:
+  project_url:
+    description: 'GitHub Project URL (e.g., https://github.com/users/USERNAME/projects/NUMBER)'
+    required: true
+  gh_projects_version:
+    description: 'Version of gh-projects to install'
+    required: false
+    default: 'v0.0.0'
+  github_token:
+    description: 'GitHub token for authentication'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  success:
+    description: 'Whether the iteration rollover completed successfully'
+    value: ${{ steps.rollover.outcome == 'success' }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+
+    - name: Install and run gh-projects iteration rollover
+      id: rollover
+      shell: bash
+      run: |
+        echo "Setting up dependencies..."
+        which gh > /dev/null || (echo "GitHub CLI not found. Please install gh CLI first." && exit 1)
+        echo "GitHub CLI found"
+
+        echo "Installing gh-projects $GH_PROJECTS_VERSION..."
+        go install github.com/kriscoleman/gh-projects@$GH_PROJECTS_VERSION
+        echo "gh-projects installed successfully"
+
+        echo "Running iteration rollover for project: $PROJECT_URL"
+        gh auth status > /dev/null 2>&1 || (echo "GitHub CLI not authenticated. Please run 'gh auth login' first." && exit 1)
+        gh-projects iteration rollover --project "$PROJECT_URL" --silent --token "$GITHUB_TOKEN"
+        echo "Iteration rollover completed successfully"
+      env:
+        PROJECT_URL: ${{ inputs.project_url }}
+        GH_PROJECTS_VERSION: ${{ inputs.gh_projects_version }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+
+branding:
+  icon: 'refresh-cw'
+  color: 'blue'

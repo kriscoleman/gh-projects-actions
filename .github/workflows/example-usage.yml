@@ -1,0 +1,39 @@
+name: 'Automated Iteration Rollover'
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC (weekly iteration rollover)
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      project_url:
+        description: 'GitHub Project URL'
+        required: true
+        type: string
+
+env:
+  PROJECT_URL: ${{ github.event.inputs.project_url || 'https://github.com/users/YOUR_USERNAME/projects/YOUR_PROJECT_NUMBER' }}
+
+jobs:
+  iteration-rollover:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: kriscoleman/gh-projects-action
+          ref: main
+      
+      - name: Run Iteration Rollover
+        uses: ./
+        with:
+          project_url: ${{ env.PROJECT_URL }}
+          gh_projects_version: 'v0.0.0'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Iteration rollover failed for project: ${{ env.PROJECT_URL }}"
+          echo "Please check the logs and run manually if needed."
